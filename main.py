@@ -19,8 +19,8 @@ LANGUAGES = {
         "coral": "Corall",
         "fish": "Peix",
         "both": "Corall i peix",
-        "distribution_pieces": "Distribució peces:",
-        "distribution_types": "Distribució tipus:",
+        "distribution_pieces": "Distribució per llosetes:",
+        "distribution_types": "Distribució per tipus:",
         "types": "tipus",
         "submit_button": "Generar selecció",
         "language_label": "Idioma"
@@ -35,8 +35,8 @@ LANGUAGES = {
         "coral": "Coral",
         "fish": "Pez",
         "both": "Coral y pez",
-        "distribution_pieces": "Distribución (losetas):",
-        "distribution_types": "Distribución (tipos):",
+        "distribution_pieces": "Distribución por losetas:",
+        "distribution_types": "Distribución por tipos:",
         "types": "tipos",
         "submit_button": "Generar selección",
         "language_label": "Idioma"
@@ -51,26 +51,39 @@ LANGUAGES = {
         "coral": "Coral",
         "fish": "Fish",
         "both": "Coral and fish",
-        "distribution_pieces": "Distribution (pieces):",
-        "distribution_types": "Distribution (types):",
+        "distribution_pieces": "Distribution by pieces:",
+        "distribution_types": "Distribution by types:",
         "types": "types",
         "submit_button": "Generate selection",
         "language_label": "Language"
     }
 }
 
-# Tile groups
+# Groups of tiles
 BASE_TILE_GROUPS = {g: [f"{g}{i}" for i in range(1, max + 1)] for g, max in zip(["A","B","C","D","E","F"],[4,4,4,4,4,2])}
 FULL_TILE_GROUPS = {g: [f"{g}{i}" for i in range(1, max + 1)] for g, max in zip(["A","B","C","D","E","F"],[6,8,8,6,10,4])}
 
-# Coral and fish sets
+# Coral-only and fish-only
 CORAL_TILES = set(["A1","A2","A5","B1","B3","B5","B7","C1","C2","C3","D1","D2","E1","E2","E9","F1","F2"])
 FISH_TILES = set(["A3","A4","B2","B4","B6","B8","C4","C5","C6","D3","D4","E3","E4","E10","F3","F4"])
 
 # Copies per player count
 COPIES_PER_PLAYER_COUNT = {1: 2, 2: 2, 3: 3, 4: 4}
 
-# Classification
+# Determine initial language from browser
+
+def get_initial_language():
+    accept = request.headers.get('Accept-Language', '')
+    # Parse primary language tag
+    if accept:
+        primary = accept.split(',')[0].split('-')[0].lower()
+        if primary == 'ca':
+            return 'CAT'
+        if primary == 'es':
+            return 'ES'
+    return 'EN'
+
+# Classify tile
 
 def classify_tile(tile, tr):
     if tile in CORAL_TILES:
@@ -79,7 +92,7 @@ def classify_tile(tile, tr):
         return tr['fish']
     return tr['both']
 
-# Selection of 10 types
+# Select 10 distinct tile types
 
 def select_10_tile_types(tile_groups):
     sel = []
@@ -90,7 +103,7 @@ def select_10_tile_types(tile_groups):
     others = [t for t in sel if t != f]
     return random.sample(others, 9) + [f]
 
-# Build tile list
+# Build list with copies
 
 def build_tile_list(types, copies):
     lst = []
@@ -99,7 +112,7 @@ def build_tile_list(types, copies):
     random.shuffle(lst)
     return lst
 
-# Balanced selection
+# Balanced selection by type difference
 
 def select_balanced(num_players, tile_groups, tr, tol):
     copies = COPIES_PER_PLAYER_COUNT[num_players]
@@ -111,7 +124,7 @@ def select_balanced(num_players, tile_groups, tr, tol):
         if abs(counts[tr['coral']] - counts[tr['fish']]) <= tol:
             return types, build_tile_list(types, copies)
 
-# HTML with language switcher and 3 options, labeled, navy background
+# HTML template
 TEMPLATE = '''
 <!doctype html>
 <html lang="{{ lang_code }}">
@@ -182,10 +195,16 @@ TEMPLATE = '''
 </body>
 </html>
 '''
+
 @app.route('/', methods=['GET','POST'])
 def index():
-    lang_code = request.values.get('lang', 'CAT')
-    tr = LANGUAGES.get(lang_code, LANGUAGES['CAT'])
+    # Determine language: URL param overrides, else browser Accept-Language
+    if 'lang' in request.values:
+        lang_code = request.values.get('lang')
+    else:
+        lang_code = get_initial_language()
+    tr = LANGUAGES.get(lang_code, LANGUAGES['EN'])
+
     types = tiles = dist_pieces = dist_types = None
     copies = players = 0
     if request.method == 'POST':
@@ -201,7 +220,16 @@ def index():
         dist_types = {tr['coral']: 0, tr['fish']: 0, tr['both']: 0}
         for t in types:
             dist_types[classify_tile(t, tr)] += 1
-    return render_template_string(TEMPLATE, tr=tr, lang_code=lang_code, types=types, players=players, copies=copies, dist_pieces=dist_pieces, dist_types=dist_types)
+    return render_template_string(
+        TEMPLATE,
+        tr=tr,
+        lang_code=lang_code,
+        types=types,
+        players=players,
+        copies=copies,
+        dist_pieces=dist_pieces,
+        dist_types=dist_types
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
