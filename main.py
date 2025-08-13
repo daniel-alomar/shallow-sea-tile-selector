@@ -5,13 +5,14 @@
 from flask import Flask, request, render_template_string
 import random
 from datetime import datetime
+from urllib.parse import urlencode
 
 app = Flask(__name__)
 
-# Application version based on current timestamp
+# Version based on current timestamp
 VERSION = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-BGG_URL = "https://boardgamegeek.com/boardgame/"  # Replace with exact game URL if known
 GAME_NAME = "Shallow Sea"
+BGG_URL = "https://boardgamegeek.com/boardgame/428440/shallow-sea"
 
 # Multilanguage strings (CAT/ES/EN/KO)
 LANGUAGES = {
@@ -113,14 +114,15 @@ LANGUAGES = {
     }
 }
 
-# Simple changelog entries (English-only notes for now)
+# Simple changelog entries
 CHANGELOG = [
     ("2025-08-13", [
         "Added KO language.",
         "Regenerate button to roll a new set with the same parameters.",
         "Localized Base / Base+Expansion options.",
         "Show type and piece balance diffs.",
-        "BGG link near the title.",
+        "BGG link via game title.",
+        "Seed sharing via URL and copy link.",
     ]),
 ]
 
@@ -177,63 +179,86 @@ def build_tile_list(types, copies):
 def select_balanced(num_players, tile_groups, tr, tol, seed=None, max_tries=5000):
     rnd = random.Random(seed) if seed is not None else random
     copies=COPIES_PER_PLAYER_COUNT[num_players]
+    last_types=None
     for _ in range(max_tries):
         types=select_10_tile_types(tile_groups, rnd)
+        last_types=types
         counts={tr['coral']:0,tr['fish']:0,tr['both']:0}
         for t in types: counts[classify_tile(t,tr)]+=1
         if abs(counts[tr['coral']] - counts[tr['fish']]) <= tol:
             return sorted(types), build_tile_list(types, copies)
-    # Fallback (should rarely happen): return last attempt
-    return sorted(types), build_tile_list(types, copies)
+    # Fallback (rare)
+    return sorted(last_types or []), build_tile_list(last_types or [], copies)
 
-# HTML template updated with BGG link, regenerate, localized options, diffs, and changelog
+# HTML template with compact header, version, BGG link on the title, changelog bubble, seed sharing
 TEMPLATE='''
 <!doctype html>
 <html lang="{{ lang_code }}">
 <head><meta charset="utf-8"><title>{{ game_name }} – Tile Selector v{{ version }}</title>
 <style>
  body{font-family:sans-serif;margin:2rem;background-color:#001f3f;color:#fff}
- .topbar{display:flex;justify-content:space-between;align-items:center}
+ .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+ .lefthead{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+ .lefthead h1{margin:0;font-size:1.6rem}
+ .lefthead .desc{opacity:.9}
+ .righthead{display:flex;flex-direction:column;align-items:flex-end;gap:.25rem}
+ .version{font-size:0.9rem;color:#ffcc80}
  .lang-switch{display:flex;gap:.5rem;align-items:center}
- .version{font-size:0.9rem;color:#ff7f50}
  .grid{display:flex;gap:2rem;margin-top:1rem}
  .col{flex:1;background:rgba(255,255,255,0.1);padding:1rem;border-radius:8px}
  button{background:#ff7f50;color:#001f3f;border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer}
  button:hover{opacity:0.9}
  input,select{padding:0.4rem;border-radius:4px;border:none}
  a{color:#ffcc80}
+ .actions{display:flex;gap:.5rem;flex-wrap:wrap}
+ .seed{margin-top:.5rem;font-size:.9rem;opacity:.9}
+ /* Changelog bubble */
+ details.changelog{position:fixed;bottom:16px;right:16px;background:rgba(255,255,255,0.08);padding:.5rem .75rem;border-radius:999px}
+ details.changelog summary{list-style:none;cursor:pointer}
+ details.changelog[open]{border-radius:12px}
+ details.changelog .panel{max-height:40vh;overflow:auto;margin-top:.5rem}
  @media(max-width:700px){.grid{flex-direction:column}}
 </style>
 <script>
-function switchLang(sel){var p=new URLSearchParams(location.search);p.set('lang',sel.value);location.search=p}
+function switchLang(sel){
+  var p=new URLSearchParams(location.search);
+  p.set('lang',sel.value);
+  location.search=p
+}
 window.addEventListener('DOMContentLoaded',()=>{
-  const remember=true; // always remember basic prefs
-  ['mode','players','tolerance','lang'].forEach(field=>{
+  ['mode','players','tolerance','lang','seed'].forEach(field=>{
     let e=document.querySelector(`[name="${field}"]`);
-    if(e){let v=localStorage.getItem(field);if(v!=null) e.value=v; e.addEventListener('change',()=>localStorage.setItem(field,e.value));}
+    if(e){
+      let v=localStorage.getItem(field);
+      if(v!=null) e.value=v;
+      e.addEventListener('change',()=>localStorage.setItem(field,e.value));
+    }
   });
 });
 function resetForm(){localStorage.clear();location.reload();}
+function copyShare(url){navigator.clipboard.writeText(url).then(()=>{alert('Link copied!');});}
 </script>
 </head>
 <body>
 <div class="topbar">
-  <div>
-    <div class="version">v{{ version }}</div>
-    <h1>{{ game_name }} – Tile Selector</h1>
-    <div><a href="{{ bgg_url }}" target="_blank" rel="noopener">{{ tr['bgg_link'] }}</a></div>
+  <div class="lefthead">
+    <h1><a href="{{ bgg_url }}" target="_blank" rel="noopener">{{ game_name }}</a> – Tile Selector</h1>
+    <span class="desc">{{ tr['intro_shallow_sea'] }}</span>
   </div>
-  <div class="lang-switch">
-    <label>{{ tr['language_label'] }}:</label>
-    <select onchange="switchLang(this)" name="lang" value="{{ lang_code }}">
-      <option value="CAT" {% if lang_code=='CAT' %}selected{% endif %}>CAT</option>
-      <option value="ES" {% if lang_code=='ES' %}selected{% endif %}>ESP</option>
-      <option value="EN" {% if lang_code=='EN' %}selected{% endif %}>ENG</option>
-      <option value="KO" {% if lang_code=='KO' %}selected{% endif %}>KOR</option>
-    </select>
+  <div class="righthead">
+    <div class="version">v{{ version }}</div>
+    <div class="lang-switch">
+      <label>{{ tr['language_label'] }}:</label>
+      <select onchange="switchLang(this)" name="lang" value="{{ lang_code }}">
+        <option value="CAT" {% if lang_code=='CAT' %}selected{% endif %}>CAT</option>
+        <option value="ES" {% if lang_code=='ES' %}selected{% endif %}>ESP</option>
+        <option value="EN" {% if lang_code=='EN' %}selected{% endif %}>ENG</option>
+        <option value="KO" {% if lang_code=='KO' %}selected{% endif %}>KOR</option>
+      </select>
+    </div>
   </div>
 </div>
-<p>{{ tr['intro_shallow_sea'] }}</p>
+
 <form method=post>
  <label>{{ tr['mode_prompt'] }}
    <select name=mode>
@@ -242,11 +267,15 @@ function resetForm(){localStorage.clear();location.reload();}
    </select>
  </label><br><br>
  <label>{{ tr['players_prompt'] }}<input type=number name=players min=1 max=4 required></label><br><br>
- <label>{{ tr['tolerance_label'] }}<input type=number name=tolerance min=0 max=5 value=1 required></label><br><br>
- <button type=submit name="action" value="generate">{{ tr['submit_button'] }}</button>
- <button type=submit name="action" value="regenerate">🔁 {{ tr['regenerate_button'] }}</button>
- <button type="button" onclick="resetForm();">{{ tr['reset_button'] }}</button>
+ <label>{{ tr['tolerance_label'] }}<input type=number name=tolerance min=0 max=5 value=1 required></label>
+ <input type="hidden" name="seed" value="{{ seed or '' }}">
+ <div class="actions" style="margin-top:12px;">
+   <button type=submit name="action" value="generate">{{ tr['submit_button'] }}</button>
+   <button type=submit name="action" value="regenerate">🔁 {{ tr['regenerate_button'] }}</button>
+   <button type="button" onclick="resetForm();">{{ tr['reset_button'] }}</button>
+ </div>
 </form>
+
 {% if types %}
 <h2>{{ tr['selected_tiles_label'].format(n=players) }}</h2>
 <div class="grid">
@@ -257,22 +286,27 @@ function resetForm(){localStorage.clear();location.reload();}
   <h3>{{ tr['distribution_pieces'] }}</h3>
   <ul>{% for k,v in dist_pieces.items() %}<li>{{ k }}: {{ v }} {{ tr['copies'] }}</li>{% endfor %}</ul>
   <h3>{{ tr['distribution_types'] }}</h3>
-  <p><em>{{ tr['type_diff'] }}:</em> {{ type_diff }} · <em>{{ tr['piece_diff'] }}:</em> {{ piece_diff }}</p>
   <ul>{% for k,v in dist_types.items() %}<li>{{ k }}: {{ v }} {{ tr['types'] }}</li>{% endfor %}</ul>
  </div>
 </div>
+<p class="seed">Seed: <code>{{ seed }}</code> · <a href="#" onclick="copyShare('{{ share_url }}'); return false;">Copy share link</a></p>
+<p><em>{{ tr['type_diff'] }}:</em> {{ type_diff }} · <em>{{ tr['piece_diff'] }}:</em> {{ piece_diff }}</p>
 {% endif %}
 
-<h3>{{ tr['changelog'] }}</h3>
-<ul>
-{% for date, notes in changelog %}
-  <li><strong>{{ date }}</strong>
+<details class="changelog">
+  <summary>🛈 {{ tr['changelog'] }}</summary>
+  <div class="panel">
     <ul>
-    {% for n in notes %}<li>{{ n }}</li>{% endfor %}
+    {% for date, notes in changelog %}
+      <li><strong>{{ date }}</strong>
+        <ul>
+        {% for n in notes %}<li>{{ n }}</li>{% endfor %}
+        </ul>
+      </li>
+    {% endfor %}
     </ul>
-  </li>
-{% endfor %}
-</ul>
+  </div>
+</details>
 
 </body>
 </html>
@@ -280,27 +314,57 @@ function resetForm(){localStorage.clear();location.reload();}
 
 @app.route('/',methods=['GET','POST'])
 def index():
-    lang_code=request.values.get('lang',get_initial_language())
-    tr=LANGUAGES.get(lang_code,LANGUAGES['EN'])
-    types=tiles=dist_pieces=dist_types=None
-    copies=players=type_diff=piece_diff=0
+    lang_code = request.values.get('lang', get_initial_language())
+    tr = LANGUAGES.get(lang_code, LANGUAGES['EN'])
 
-    if request.method=='POST':
-        action = request.form.get('action','generate')
+    types = tiles = dist_pieces = dist_types = None
+    copies = players = type_diff = piece_diff = 0
+
+    # Seed from URL if present
+    seed_param = request.values.get('seed')
+    seed = int(seed_param) if (seed_param and seed_param.isdigit()) else None
+
+    if request.method == 'POST':
+        action = request.form.get('action', 'generate')  # not used differently for now
         mode = request.form['mode']
         players = int(request.form['players'])
         tol = int(request.form['tolerance'])
-        tg = FULL_TILE_GROUPS if mode=='2' else BASE_TILE_GROUPS
-        # Optional seed (could be extended later)
-        seed = None
-        types,tiles=select_balanced(players,tg,tr,tol,seed)
-        copies=COPIES_PER_PLAYER_COUNT[players]
-        dist_pieces={tr['coral']:0,tr['fish']:0,tr['both']:0}
-        for tile in tiles: dist_pieces[classify_tile(tile,tr)]+=1
-        dist_types={tr['coral']:0,tr['fish']:0,tr['both']:0}
-        for t in types: dist_types[classify_tile(t,tr)]+=1
+
+        # Seed from POST overrides URL if valid; otherwise generate fresh if missing
+        seed_post = request.form.get('seed')
+        if seed_post and seed_post.isdigit():
+            seed = int(seed_post)
+        else:
+            if seed is None:
+                seed = random.randint(0, 2**31 - 1)
+
+        tg = FULL_TILE_GROUPS if mode == '2' else BASE_TILE_GROUPS
+        types, tiles = select_balanced(players, tg, tr, tol, seed)
+        copies = COPIES_PER_PLAYER_COUNT[players]
+
+        # Build distributions
+        dist_pieces = {tr['coral']: 0, tr['fish']: 0, tr['both']: 0}
+        for tile in tiles:
+            dist_pieces[classify_tile(tile, tr)] += 1
+        dist_types = {tr['coral']: 0, tr['fish']: 0, tr['both']: 0}
+        for t in types:
+            dist_types[classify_tile(t, tr)] += 1
+
+        # Feedback (at the end)
         type_diff = abs(dist_types[tr['coral']] - dist_types[tr['fish']])
         piece_diff = abs(dist_pieces[tr['coral']] - dist_pieces[tr['fish']])
+
+    # Share URL with current params (if seed exists)
+    share_url = ''
+    if seed is not None:
+        params = {
+            'lang': lang_code,
+            'mode': request.form.get('mode') or request.args.get('mode') or '1',
+            'players': request.form.get('players') or request.args.get('players') or '2',
+            'tolerance': request.form.get('tolerance') or request.args.get('tolerance') or '1',
+            'seed': str(seed)
+        }
+        share_url = request.base_url + '?' + urlencode(params)
 
     return render_template_string(
         TEMPLATE,
@@ -316,8 +380,10 @@ def index():
         game_name=GAME_NAME,
         bgg_url=BGG_URL,
         changelog=CHANGELOG,
-        version=VERSION
+        version=VERSION,
+        seed=seed,
+        share_url=share_url
     )
 
 if __name__=='__main__':
-    app.run(debug=True,host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0')
