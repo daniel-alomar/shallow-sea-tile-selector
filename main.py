@@ -38,7 +38,6 @@ LANGUAGES = {
     # ES, EN, KO omitted for brevity
 }
 
-# Dummy tile data for demonstration
 FULL_TILE_GROUPS = list("A1 A2 A3 A4 A5 A6".split())
 BASE_TILE_GROUPS = list("A1 A2 A3 A4".split())
 COPIES_PER_PLAYER_COUNT = {1: 2, 2: 2, 3: 3, 4: 4}
@@ -67,10 +66,12 @@ TEMPLATE = '''
 <head><meta charset="utf-8"><title>{{ game_name }} – Tile Selector v{{ version }}</title></head>
 <body>
 <div style="display:flex;justify-content:space-between;align-items:center;">
- <h1><a href="{{ bgg_url }}" target="_blank">{{ game_name }}</a> – Tile Selector</h1>
+ <div>
+   <h1><a href="{{ bgg_url }}" target="_blank">{{ game_name }}</a> – Tile Selector</h1>
+   <p>{{ tr['intro_shallow_sea'] }}</p>
+ </div>
  <span>v{{ version }}</span>
 </div>
-<p>{{ tr['intro_shallow_sea'] }}</p>
 <form method=post>
  <label><input type="checkbox" name="expansion" {% if expansion_checked %}checked{% endif %}> {{ tr['mode_expansion'] }}</label><br><br>
  <label>{{ tr['players_prompt'] }}<input type=number name=players min=1 max=4 value="{{ players }}" required></label><br><br>
@@ -166,4 +167,4 @@ def index():
     )
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
