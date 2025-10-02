@@ -9,7 +9,7 @@ app = Flask(__name__)
 GAME_NAME = "Shallow Sea"
 BGG_URL = "https://boardgamegeek.com/boardgame/428440/shallow-sea"
 # Fixed version string (release date)
-VERSION = "2025-10-02"
+VERSION = "2025-10-02a"
 
 # =============================
 # i18n: FULL dictionaries (CAT/ES/EN/KO)
@@ -23,7 +23,7 @@ LANGUAGES = {
         "tolerance_label": "Tolerància (diferència tipus):",
         "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "Què és la tolerància?",
-        "tolerance_explain_body": "La tolerància estableix la diferència màxima permesa entre el nombre de TIPUS de llosetes que necessiten Corall i el nombre de TIPUS que necessiten Peix. El programa fa intents fins que |Corall−Peix| ≤ tolerància pels TIPUS. La distribució per llosetes (peces totals) no està restringida directament, però sol quedar força equilibrada.",
+        "tolerance_explain_body": "La tolerància estableix la diferència màxima permesa entre el nombre de TIPUS de llosetes que necessiten Corall i el nombre de TIPUS que necessiten Peix. El programa fa intents fins que la diferència entre Corall i Peix en NOMBRE DE TIPUS sigui menor o igual que la tolerància pels TIPUS. La distribució per llosetes (peces totals) no està restringida directament, però sol quedar força equilibrada.",
         "submit_button": "Generar selecció",
         "regenerate_button": "Tornar a generar",
         "reset_button": "Reiniciar",
@@ -48,7 +48,7 @@ LANGUAGES = {
         "tolerance_label": "Tolerancia (diferencia tipos):",
         "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "¿Qué es la tolerancia?",
-        "tolerance_explain_body": "La tolerancia fija la diferencia máxima permitida entre el número de TIPOS de losetas que requieren Coral y el número de TIPOS que requieren Pez. El programa repite hasta que |Coral−Pez| ≤ tolerancia para TIPOS. La distribución por losetas (piezas totales) no se restringe directamente, aunque suele quedar bastante equilibrada.",
+        "tolerance_explain_body": "La tolerancia fija la diferencia máxima permitida entre el número de TIPOS de losetas que requieren Coral y el número de TIPOS que requieren Pez. El programa repite hasta que la diferencia entre Coral y Pez en NÚMERO DE TIPOS sea menor o igual que la tolerancia para TIPOS. La distribución por losetas (piezas totales) no se restringe directamente, aunque suele quedar bastante equilibrada.",
         "submit_button": "Generar selección",
         "regenerate_button": "Volver a generar",
         "reset_button": "Reiniciar",
@@ -73,7 +73,7 @@ LANGUAGES = {
         "tolerance_label": "Tolerance (type diff):",
         "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "What is tolerance?",
-        "tolerance_explain_body": "Tolerance sets the maximum allowed difference between the number of tile TYPES that require Coral and the number of TYPES that require Fish. The selector retries until |Coral−Fish| ≤ tolerance for TYPES. Piece distribution (total tiles) is not directly constrained, though it usually ends up fairly even.",
+        "tolerance_explain_body": "Tolerance sets the maximum allowed difference between the number of tile TYPES that require Coral and the number of TYPES that require Fish. The selector retries until the difference between Coral and Fish in NUMBER OF TYPES is less than or equal to the tolerance for TYPES. Piece distribution (total tiles) is not directly constrained, though it usually ends up fairly even.",
         "submit_button": "Generate selection",
         "regenerate_button": "Regenerate",
         "reset_button": "Reset",
@@ -98,7 +98,7 @@ LANGUAGES = {
         "tolerance_label": "허용 편차(유형 차이):",
         "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "허용 편차란?",
-        "tolerance_explain_body": "허용 편차는 산호가 필요한 타일 유형 수와 물고기가 필요한 타일 유형 수의 차이에 대한 최대 허용치를 의미합니다. 선택기는 |산호−물고기| ≤ 허용 편차(유형 기준)가 될 때까지 다시 시도합니다. 총 타일 수(피스) 분포는 직접적으로 제한하지 않지만 보통 비슷하게 맞춰집니다.",
+        "tolerance_explain_body": "허용 편차는 산호가 필요한 타일 유형 수와 물고기가 필요한 타일 유형 수의 차이에 대한 최대 허용치를 의미합니다. 선택기는 산호와 물고기 유형 수의 차이가 허용 편차보다 작거나 같을 때(유형 기준)가 될 때까지 다시 시도합니다. 총 타일 수(피스) 분포는 직접적으로 제한하지 않지만 보통 비슷하게 맞춰집니다.",
         "submit_button": "선택 생성",
         "regenerate_button": "다시 생성",
         "reset_button": "초기화",
@@ -242,7 +242,7 @@ TEMPLATE = '''
     input,select{padding:.4rem;border-radius:4px;border:none}
     @media(max-width:700px){.grid{flex-direction:column}}
     /* changelog bubble */
-    details.changelog{position:fixed;bottom:16px;right:16px;background:rgba(255,255,255,0.08);padding:.5rem .75rem;border-radius:999px}
+    details.changelog{position:fixed;bottom:16px;right:16px;background:rgba(255,255,255,0.08);padding:.5rem .75rem;border-radius:999px} details.help{position:static}
     details.changelog summary{list-style:none;cursor:pointer}
     details.changelog[open]{border-radius:12px}
     details.changelog .panel{max-height:40vh;overflow:auto;margin-top:.5rem}
@@ -304,11 +304,14 @@ TEMPLATE = '''
     <input type="hidden" name="seed" value="{{ seed or '' }}">
     <div style="margin-top:12px; display:flex; gap:.5rem; flex-wrap:wrap;">
       <button type="submit" name="action" value="generate">{{ tr['submit_button'] }}</button>
-      {% if types %}
-      <button type="submit" name="action" value="regenerate">🔁 {{ tr['regenerate_button'] }}</button>
-      {% endif %}
       <button type="button" onclick="resetForm();">{{ tr['reset_button'] }}</button>
     </div>
+
+    <!-- Tolerance help panel shown from the start -->
+    <details class="help" open style="margin-top:10px;background:rgba(255,255,255,.08);padding:.75rem 1rem;border-radius:8px;">
+      <summary style="cursor:pointer;"><strong>{{ tr['tolerance_explain_title'] }}</strong></summary>
+      <div style="margin-top:.5rem;">{{ tr['tolerance_explain_body'] }}</div>
+    </details>
   </form>
 
   {% if types %}
@@ -332,10 +335,6 @@ TEMPLATE = '''
   </div>
   <p style="margin-top:.5rem; opacity:.9;">Seed: <code>{{ seed }}</code> · <a href="#" onclick="copyShare('{{ share_url }}'); return false;">Copy share link</a></p>
   <p><em>{{ tr['type_diff'] }}:</em> {{ type_diff }} · <em>{{ tr['piece_diff'] }}:</em> {{ piece_diff }}</p>
-  <div id="tolerance-info" style="margin-top:0.75rem;opacity:.95;background:rgba(255,255,255,.08);padding:.75rem 1rem;border-radius:8px;">
-    <strong>{{ tr['tolerance_explain_title'] }}</strong><br>
-    <span>{{ tr['tolerance_explain_body'] }}</span>
-  </div>
   {% endif %}
 
   <details class="changelog">
