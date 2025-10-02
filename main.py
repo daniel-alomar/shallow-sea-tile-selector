@@ -21,11 +21,9 @@ LANGUAGES = {
         "expansion_label": "Fer servir l'expansió 'Nesting Season'",
         "players_prompt": "Nombre de jugadors (1-4):",
         "tolerance_label": "Tolerància (diferència tipus):",
-        "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "Què és la tolerància?",
         "tolerance_explain_body": "La tolerància estableix la diferència màxima permesa entre el nombre de TIPUS de llosetes que necessiten Corall i el nombre de TIPUS que necessiten Peix. El programa fa intents fins que la diferència entre Corall i Peix en NOMBRE DE TIPUS sigui menor o igual que la tolerància pels TIPUS. La distribució per llosetes (peces totals) no està restringida directament, però sol quedar força equilibrada.",
         "submit_button": "Generar selecció",
-        "regenerate_button": "Tornar a generar",
         "reset_button": "Reiniciar",
         "selected_tiles_label": "Llosetes seleccionades per a {n} jugadors:",
         "distribution_pieces": "Distribució per llosetes:",
@@ -37,7 +35,6 @@ LANGUAGES = {
         "both": "Corall i peix",
         "type_diff": "Diferència de tipus",
         "piece_diff": "Diferència per llosetes",
-        "changelog": "Registre de canvis",
         "share_link_copied": "Enllaç copiat!"
     },
     "ES": {
@@ -46,11 +43,9 @@ LANGUAGES = {
         "expansion_label": "Usar la expansión 'Nesting Season'",
         "players_prompt": "Número de jugadores (1-4):",
         "tolerance_label": "Tolerancia (diferencia tipos):",
-        "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "¿Qué es la tolerancia?",
         "tolerance_explain_body": "La tolerancia fija la diferencia máxima permitida entre el número de TIPOS de losetas que requieren Coral y el número de TIPOS que requieren Pez. El programa repite hasta que la diferencia entre Coral y Pez en NÚMERO DE TIPOS sea menor o igual que la tolerancia para TIPOS. La distribución por losetas (piezas totales) no se restringe directamente, aunque suele quedar bastante equilibrada.",
         "submit_button": "Generar selección",
-        "regenerate_button": "Volver a generar",
         "reset_button": "Reiniciar",
         "selected_tiles_label": "Losetas seleccionadas para {n} jugadores:",
         "distribution_pieces": "Distribución losetas:",
@@ -62,7 +57,6 @@ LANGUAGES = {
         "both": "Coral y pez",
         "type_diff": "Diferencia de tipos",
         "piece_diff": "Diferencia por losetas",
-        "changelog": "Registro de cambios",
         "share_link_copied": "¡Enlace copiado!"
     },
     "EN": {
@@ -71,11 +65,9 @@ LANGUAGES = {
         "expansion_label": "Use 'Nesting Season' expansion",
         "players_prompt": "Number of players (1-4):",
         "tolerance_label": "Tolerance (type diff):",
-        "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "What is tolerance?",
         "tolerance_explain_body": "Tolerance sets the maximum allowed difference between the number of tile TYPES that require Coral and the number of TYPES that require Fish. The selector retries until the difference between Coral and Fish in NUMBER OF TYPES is less than or equal to the tolerance for TYPES. Piece distribution (total tiles) is not directly constrained, though it usually ends up fairly even.",
         "submit_button": "Generate selection",
-        "regenerate_button": "Regenerate",
         "reset_button": "Reset",
         "selected_tiles_label": "Selected tiles for {n} players:",
         "distribution_pieces": "Distribution by pieces:",
@@ -87,7 +79,6 @@ LANGUAGES = {
         "both": "Coral and fish",
         "type_diff": "Type diff",
         "piece_diff": "Piece diff",
-        "changelog": "Changelog",
         "share_link_copied": "Link copied!"
     },
     "KO": {
@@ -96,11 +87,9 @@ LANGUAGES = {
         "expansion_label": "'Nesting Season' 확장 사용",
         "players_prompt": "플레이어 수 (1-4):",
         "tolerance_label": "허용 편차(유형 차이):",
-        "tolerance_mark": "ⓘ",
         "tolerance_explain_title": "허용 편차란?",
         "tolerance_explain_body": "허용 편차는 산호가 필요한 타일 유형 수와 물고기가 필요한 타일 유형 수의 차이에 대한 최대 허용치를 의미합니다. 선택기는 산호와 물고기 유형 수의 차이가 허용 편차보다 작거나 같을 때(유형 기준)가 될 때까지 다시 시도합니다. 총 타일 수(피스) 분포는 직접적으로 제한하지 않지만 보통 비슷하게 맞춰집니다.",
         "submit_button": "선택 생성",
-        "regenerate_button": "다시 생성",
         "reset_button": "초기화",
         "selected_tiles_label": "{n}인 게임을 위한 선택된 타일:",
         "distribution_pieces": "타일 수 기준 분포:",
@@ -112,7 +101,6 @@ LANGUAGES = {
         "both": "산호 및 물고기",
         "type_diff": "유형 차이",
         "piece_diff": "타일 수 차이",
-        "changelog": "변경 기록",
         "share_link_copied": "링크가 복사되었습니다!"
     }
 }
@@ -240,13 +228,7 @@ TEMPLATE = '''
     button{background:#ff7f50;color:#001f3f;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer}
     button:hover{opacity:.9}
     input,select{padding:.4rem;border-radius:4px;border:none}
-    @media(max-width:700px){.grid{flex-direction:column}}
-    /* changelog bubble */
-    details.changelog{position:fixed;bottom:16px;right:16px;background:rgba(255,255,255,0.08);padding:.5rem .75rem;border-radius:999px} details.help{position:static}
-    details.changelog summary{list-style:none;cursor:pointer}
-    details.changelog[open]{border-radius:12px}
-    details.changelog .panel{max-height:40vh;overflow:auto;margin-top:.5rem}
-  </style>
+    @media(max-width:700px){.grid{flex-direction:column}}  </style>
   <script>
     function switchLang(sel){
       var p=new URLSearchParams(location.search);
@@ -300,137 +282,4 @@ TEMPLATE = '''
   <form method="post">
     <label><input type="checkbox" name="expansion" {% if expansion_checked %}checked{% endif %}> {{ tr['expansion_label'] }}</label><br><br>
     <label>{{ tr['players_prompt'] }} <input type="number" name="players" min="1" max="4" value="{{ players }}" required></label><br><br>
-    <label>{{ tr['tolerance_label'] }} <sup title="{{ tr['tolerance_explain_title'] }}">{{ tr['tolerance_mark'] }}</sup> <input type="number" name="tolerance" min="0" max="5" value="{{ tolerance }}" required></label>
-    <input type="hidden" name="seed" value="{{ seed or '' }}">
-    <div style="margin-top:12px; display:flex; gap:.5rem; flex-wrap:wrap;">
-      <button type="submit" name="action" value="generate">{{ tr['submit_button'] }}</button>
-      <button type="button" onclick="resetForm();">{{ tr['reset_button'] }}</button>
-    </div>
-
-    <!-- Tolerance help panel shown from the start -->
-    <details class="help" open style="margin-top:10px;background:rgba(255,255,255,.08);padding:.75rem 1rem;border-radius:8px;">
-      <summary style="cursor:pointer;"><strong>{{ tr['tolerance_explain_title'] }}</strong></summary>
-      <div style="margin-top:.5rem;">{{ tr['tolerance_explain_body'] }}</div>
-    </details>
-  </form>
-
-  {% if types %}
-  <h2>{{ tr['selected_tiles_label'].format(n=players) }}</h2>
-  <div class="grid">
-    <div class="col">
-      <ul>
-        {% for t in types %}<li>{{ t }} ({{ copies }} {{ tr['copies'] }})</li>{% endfor %}
-      </ul>
-    </div>
-    <div class="col">
-      <h3>{{ tr['distribution_pieces'] }}</h3>
-      <ul>
-        {% for k,v in dist_pieces.items() %}<li>{{ k }}: {{ v }} {{ tr['copies'] }}</li>{% endfor %}
-      </ul>
-      <h3>{{ tr['distribution_types'] }}</h3>
-      <ul>
-        {% for k,v in dist_types.items() %}<li>{{ k }}: {{ v }} {{ tr['types'] }}</li>{% endfor %}
-      </ul>
-    </div>
-  </div>
-  <p style="margin-top:.5rem; opacity:.9;">Seed: <code>{{ seed }}</code> · <a href="#" onclick="copyShare('{{ share_url }}'); return false;">Copy share link</a></p>
-  <p><em>{{ tr['type_diff'] }}:</em> {{ type_diff }} · <em>{{ tr['piece_diff'] }}:</em> {{ piece_diff }}</p>
-  {% endif %}
-
-  <details class="changelog">
-    <summary>🛈 {{ tr['changelog'] }}</summary>
-    <div class="panel">
-      <ul>
-        <li><strong>2025-10-02</strong>
-          <ul>
-            <li>Fixed version date; tolerance help; expansion + seed + tolerance in share URL.</li>
-            <li>Languages: CAT/ES/EN/KO. BGG title link. Balanced selection with type diff.</li>
-          </ul>
-        </li>
-      </ul>
-    </div>
-  </details>
-</body>
-</html>
-'''
-
-# =============================
-# Routes
-# =============================
-@app.route('/', methods=['GET','POST'])
-def index():
-    # Language
-    lang_code = request.values.get('lang', get_initial_language())
-    tr = LANGUAGES.get(lang_code, LANGUAGES['EN'])
-
-    # Inputs (GET defaults)
-    players = int(request.values.get('players', 2))
-    tolerance = int(request.values.get('tolerance', 1))
-    expansion_checked = (request.values.get('expansion') == '1')
-    seed_param = request.values.get('seed')
-    seed = int(seed_param) if (seed_param and seed_param.isdigit()) else None
-
-    types = tiles = dist_pieces = dist_types = None
-    copies = type_diff = piece_diff = 0
-
-    if request.method == 'POST':
-        # Read POST
-        players = int(request.form['players'])
-        tolerance = int(request.form['tolerance'])
-        expansion_checked = (request.form.get('expansion') == 'on')
-        seed_post = request.form.get('seed')
-        if seed_post and seed_post.isdigit():
-            seed = int(seed_post)
-        else:
-            if seed is None:
-                seed = random.randint(0, 2**31 - 1)
-        # Choose tile universe
-        tile_groups = FULL_TILE_GROUPS if expansion_checked else BASE_TILE_GROUPS
-        # Select
-        types, tiles = select_balanced(players, tile_groups, tr, tolerance, seed)
-        copies = COPIES_PER_PLAYER_COUNT[players]
-        # Distributions
-        dist_pieces = {tr['coral']:0, tr['fish']:0, tr['both']:0}
-        for tile in tiles:
-            dist_pieces[classify_tile(tile, tr)] += 1
-        dist_types = {tr['coral']:0, tr['fish']:0, tr['both']:0}
-        for t in types:
-            dist_types[classify_tile(t, tr)] += 1
-        type_diff = abs(dist_types[tr['coral']] - dist_types[tr['fish']])
-        piece_diff = abs(dist_pieces[tr['coral']] - dist_pieces[tr['fish']])
-
-    # Share URL (only meaningful if seed exists)
-    share_url = ''
-    if seed is not None:
-        params = {
-            'lang': lang_code,
-            'players': str(players),
-            'tolerance': str(tolerance),
-            'seed': str(seed),
-            'expansion': '1' if expansion_checked else '0'
-        }
-        share_url = request.base_url + '?' + urlencode(params)
-
-    return render_template_string(
-        TEMPLATE,
-        tr=tr,
-        lang_code=lang_code,
-        game_name=GAME_NAME,
-        bgg_url=BGG_URL,
-        version=VERSION,
-        players=players,
-        tolerance=tolerance,
-        expansion_checked=expansion_checked,
-        seed=seed,
-        types=types,
-        tiles=tiles,
-        copies=copies,
-        dist_pieces=dist_pieces,
-        dist_types=dist_types,
-        type_diff=type_diff,
-        piece_diff=piece_diff,
-        share_url=share_url,
-    )
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    <label>{{ tr['tolerance_label'] }} <input type="number" name="tolerance" min="0" max="5" value
