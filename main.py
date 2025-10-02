@@ -8,11 +8,10 @@ app = Flask(__name__)
 # App constants
 GAME_NAME = "Shallow Sea"
 BGG_URL = "https://boardgamegeek.com/boardgame/428440/shallow-sea"
-# Fixed version string (release date)
-VERSION = "2025-10-02a"
+VERSION = "2025-10-02b"
 
 # =============================
-# i18n: FULL dictionaries (CAT/ES/EN/KO)
+# i18n: dictionaries
 # =============================
 LANGUAGES = {
     "CAT": {
@@ -108,30 +107,28 @@ LANGUAGES = {
 # =============================
 # Tile sets
 # =============================
-# Full game (base + expansion)
 FULL_TILE_GROUPS = {
-    'A': [f"A{i}" for i in range(1, 6+1)],        # A1–A6
-    'B': [f"B{i}" for i in range(1, 8+1)],        # B1–B8
-    'C': [f"C{i}" for i in range(1, 8+1)],        # C1–C8
-    'D': [f"D{i}" for i in range(1, 6+1)],        # D1–D6
-    'E': [f"E{i}" for i in range(1, 10+1)],       # E1–E10
-    'F': [f"F{i}" for i in range(1, 4+1)],        # F1–F4
+    'A': [f"A{i}" for i in range(1, 6+1)],
+    'B': [f"B{i}" for i in range(1, 8+1)],
+    'C': [f"C{i}" for i in range(1, 8+1)],
+    'D': [f"D{i}" for i in range(1, 6+1)],
+    'E': [f"E{i}" for i in range(1, 10+1)],
+    'F': [f"F{i}" for i in range(1, 4+1)],
 }
-# Base game only
 BASE_TILE_GROUPS = {
-    'A': [f"A{i}" for i in range(1, 4+1)],        # A1–A4
-    'B': [f"B{i}" for i in range(1, 4+1)],        # B1–B4
-    'C': [f"C{i}" for i in range(1, 4+1)],        # C1–C4
-    'D': [f"D{i}" for i in range(1, 4+1)],        # D1–D4
-    'E': [f"E{i}" for i in range(1, 4+1)],        # E1–E4
-    'F': [f"F{i}" for i in range(1, 2+1)],        # F1–F2
+    'A': [f"A{i}" for i in range(1, 4+1)],
+    'B': [f"B{i}" for i in range(1, 4+1)],
+    'C': [f"C{i}" for i in range(1, 4+1)],
+    'D': [f"D{i}" for i in range(1, 4+1)],
+    'E': [f"E{i}" for i in range(1, 4+1)],
+    'F': [f"F{i}" for i in range(1, 2+1)],
 }
 
 # Classification by resource
 CORAL_TILES = {"A1","A2","A5","B1","B3","B5","B7","C1","C2","C3","D1","D2","E1","E2","E9","F1","F2"}
 FISH_TILES  = {"A3","A4","B2","B4","B6","B8","C4","C5","C6","D3","D4","E3","E4","E10","F3","F4"}
 
-# Copies per player count (2 copies for 1–2p, 3 for 3p, 4 for 4p)
+# Copies per player count
 COPIES_PER_PLAYER_COUNT = {1:2, 2:2, 3:3, 4:4}
 
 # =============================
@@ -159,20 +156,16 @@ def select_10_tile_types(tile_groups, rnd):
     Then ensure exactly 10 keeping the F tile.
     """
     picks = []
-    # Exactly 1 from F
     f_pick = rnd.choice(tile_groups['F'])
-    # Up-to quotas for others
     for g, cap in [('A',2),('B',2),('C',3),('D',2),('E',3)]:
         pool = tile_groups[g]
         take = min(cap, len(pool))
         picks += rnd.sample(pool, take)
     picks.append(f_pick)
-    # Downsample to 10 preserving the F tile
     while len(picks) > 10:
         non_f = [t for t in picks if not t.startswith('F')]
         t = rnd.choice(non_f)
         picks.remove(t)
-    # Safety top-up if <10 (should be rare)
     while len(picks) < 10:
         for g, cap in [('C',3),('E',3),('A',2),('B',2),('D',2)]:
             avail = [t for t in tile_groups[g] if t not in picks]
@@ -202,7 +195,6 @@ def select_balanced(num_players, tile_groups, tr, tol, seed=None, max_tries=5000
             counts[classify_tile(t, tr)] += 1
         if abs(counts[tr['coral']] - counts[tr['fish']]) <= tol:
             return types, build_tile_list(types, copies, rnd)
-    # Fallback (rare)
     return last_types or [], build_tile_list(last_types or [], copies, rnd)
 
 # =============================
@@ -228,7 +220,8 @@ TEMPLATE = '''
     button{background:#ff7f50;color:#001f3f;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer}
     button:hover{opacity:.9}
     input,select{padding:.4rem;border-radius:4px;border:none}
-    @media(max-width:700px){.grid{flex-direction:column}}  </style>
+    @media(max-width:700px){.grid{flex-direction:column}}
+  </style>
   <script>
     function switchLang(sel){
       var p=new URLSearchParams(location.search);
@@ -239,14 +232,14 @@ TEMPLATE = '''
     function copyShare(url){ navigator.clipboard.writeText(url).then(()=>{ alert('{{ tr['share_link_copied'] }}'); }); }
     window.addEventListener('DOMContentLoaded', ()=>{
       const params = new URLSearchParams(location.search);
-      const urlExp = params.get('expansion'); // '1' | '0' | null
+      const urlExp = params.get('expansion');
       const fields = ['expansion','players','tolerance','lang','seed'];
       fields.forEach(name=>{
         const el = document.querySelector(`[name="${name}"]`);
         if(!el) return;
         const saved = localStorage.getItem(name);
         if(saved!=null){
-          if(name==='expansion' && urlExp!==null){ /* respect URL state */ }
+          if(name==='expansion' && urlExp!==null){ }
           else if(el.type==='checkbox') el.checked = (saved==='1');
           else el.value = saved;
         }
@@ -282,4 +275,118 @@ TEMPLATE = '''
   <form method="post">
     <label><input type="checkbox" name="expansion" {% if expansion_checked %}checked{% endif %}> {{ tr['expansion_label'] }}</label><br><br>
     <label>{{ tr['players_prompt'] }} <input type="number" name="players" min="1" max="4" value="{{ players }}" required></label><br><br>
-    <label>{{ tr['tolerance_label'] }} <input type="number" name="tolerance" min="0" max="5" value
+    <label>{{ tr['tolerance_label'] }} <input type="number" name="tolerance" min="0" max="5" value="{{ tolerance }}" required></label>
+    <input type="hidden" name="seed" value="{{ seed or '' }}">
+
+    <!-- Tolerance help panel (collapsed by default) -->
+    <details class="help" style="margin-top:10px;background:rgba(255,255,255,.08);padding:.75rem 1rem;border-radius:8px;">
+      <summary style="cursor:pointer;"><strong>{{ tr['tolerance_explain_title'] }}</strong></summary>
+      <div style="margin-top:.5rem;">{{ tr['tolerance_explain_body'] }}</div>
+    </details>
+
+    <div style="margin-top:12px; display:flex; gap:.5rem; flex-wrap:wrap;">
+      <button type="submit" name="action" value="generate">{{ tr['submit_button'] }}</button>
+      <button type="button" onclick="resetForm();">{{ tr['reset_button'] }}</button>
+    </div>
+  </form>
+
+  {% if types %}
+  <h2>{{ tr['selected_tiles_label'].format(n=players) }}</h2>
+  <div class="grid">
+    <div class="col">
+      <ul>
+        {% for t in types %}<li>{{ t }} ({{ copies }} {{ tr['copies'] }})</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="col">
+      <h3>{{ tr['distribution_pieces'] }}</h3>
+      <ul>
+        {% for k,v in dist_pieces.items() %}<li>{{ k }}: {{ v }} {{ tr['copies'] }}</li>{% endfor %}
+      </ul>
+      <h3>{{ tr['distribution_types'] }}</h3>
+      <ul>
+        {% for k,v in dist_types.items() %}<li>{{ k }}: {{ v }} {{ tr['types'] }}</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <p style="margin-top:.5rem; opacity:.9;">Seed: <code>{{ seed }}</code> · <a href="#" onclick="copyShare('{{ share_url }}'); return false;">Copy share link</a></p>
+  <p><em>{{ tr['type_diff'] }}:</em> {{ type_diff }} · <em>{{ tr['piece_diff'] }}:</em> {{ piece_diff }}</p>
+  {% endif %}
+
+</body>
+</html>
+'''
+
+# =============================
+# Routes
+# =============================
+@app.route('/', methods=['GET','POST'])
+def index():
+    lang_code = request.values.get('lang', get_initial_language())
+    tr = LANGUAGES.get(lang_code, LANGUAGES['EN'])
+
+    players = int(request.values.get('players', 2))
+    tolerance = int(request.values.get('tolerance', 1))
+    expansion_checked = (request.values.get('expansion') == '1')
+    seed_param = request.values.get('seed')
+    seed = int(seed_param) if (seed_param and seed_param.isdigit()) else None
+
+    types = tiles = dist_pieces = dist_types = None
+    copies = type_diff = piece_diff = 0
+
+    if request.method == 'POST':
+        players = int(request.form['players'])
+        tolerance = int(request.form['tolerance'])
+        expansion_checked = (request.form.get('expansion') == 'on')
+        seed_post = request.form.get('seed')
+        if seed_post and seed_post.isdigit():
+            seed = int(seed_post)
+        else:
+            if seed is None:
+                seed = random.randint(0, 2**31 - 1)
+        tile_groups = FULL_TILE_GROUPS if expansion_checked else BASE_TILE_GROUPS
+        types, tiles = select_balanced(players, tile_groups, tr, tolerance, seed)
+        copies = COPIES_PER_PLAYER_COUNT[players]
+        dist_pieces = {tr['coral']:0, tr['fish']:0, tr['both']:0}
+        for tile in tiles:
+            dist_pieces[classify_tile(tile, tr)] += 1
+        dist_types = {tr['coral']:0, tr['fish']:0, tr['both']:0}
+        for t in types:
+            dist_types[classify_tile(t, tr)] += 1
+        type_diff = abs(dist_types[tr['coral']] - dist_types[tr['fish']])
+        piece_diff = abs(dist_pieces[tr['coral']] - dist_pieces[tr['fish']])
+
+    share_url = ''
+    if seed is not None:
+        params = {
+            'lang': lang_code,
+            'players': str(players),
+            'tolerance': str(tolerance),
+            'seed': str(seed),
+            'expansion': '1' if expansion_checked else '0'
+        }
+        share_url = request.base_url + '?' + urlencode(params)
+
+    return render_template_string(
+        TEMPLATE,
+        tr=tr,
+        lang_code=lang_code,
+        game_name=GAME_NAME,
+        bgg_url=BGG_URL,
+        version=VERSION,
+        players=players,
+        tolerance=tolerance,
+        expansion_checked=expansion_checked,
+        seed=seed,
+        types=types,
+        tiles=tiles,
+        copies=copies,
+        dist_pieces=dist_pieces,
+        dist_types=dist_types,
+        type_diff=type_diff,
+        piece_diff=piece_diff,
+        share_url=share_url,
+    )
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
