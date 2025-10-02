@@ -1,7 +1,6 @@
 # main.py
 from flask import Flask, request, render_template_string
 import random
-from datetime import datetime
 from urllib.parse import urlencode
 
 app = Flask(__name__)
@@ -9,7 +8,8 @@ app = Flask(__name__)
 # App constants
 GAME_NAME = "Shallow Sea"
 BGG_URL = "https://boardgamegeek.com/boardgame/428440/shallow-sea"
-VERSION = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# Fixed version string (release date)
+VERSION = "2025-10-02"
 
 # =============================
 # i18n: FULL dictionaries (CAT/ES/EN/KO)
@@ -21,6 +21,9 @@ LANGUAGES = {
         "expansion_label": "Fer servir l'expansió 'Nesting Season'",
         "players_prompt": "Nombre de jugadors (1-4):",
         "tolerance_label": "Tolerància (diferència tipus):",
+        "tolerance_mark": "ⓘ",
+        "tolerance_explain_title": "Què és la tolerància?",
+        "tolerance_explain_body": "La tolerància estableix la diferència màxima permesa entre el nombre de TIPUS de llosetes que necessiten Corall i el nombre de TIPUS que necessiten Peix. El programa fa intents fins que |Corall−Peix| ≤ tolerància pels TIPUS. La distribució per llosetes (peces totals) no està restringida directament, però sol quedar força equilibrada.",
         "submit_button": "Generar selecció",
         "regenerate_button": "Tornar a generar",
         "reset_button": "Reiniciar",
@@ -43,6 +46,9 @@ LANGUAGES = {
         "expansion_label": "Usar la expansión 'Nesting Season'",
         "players_prompt": "Número de jugadores (1-4):",
         "tolerance_label": "Tolerancia (diferencia tipos):",
+        "tolerance_mark": "ⓘ",
+        "tolerance_explain_title": "¿Qué es la tolerancia?",
+        "tolerance_explain_body": "La tolerancia fija la diferencia máxima permitida entre el número de TIPOS de losetas que requieren Coral y el número de TIPOS que requieren Pez. El programa repite hasta que |Coral−Pez| ≤ tolerancia para TIPOS. La distribución por losetas (piezas totales) no se restringe directamente, aunque suele quedar bastante equilibrada.",
         "submit_button": "Generar selección",
         "regenerate_button": "Volver a generar",
         "reset_button": "Reiniciar",
@@ -65,6 +71,9 @@ LANGUAGES = {
         "expansion_label": "Use 'Nesting Season' expansion",
         "players_prompt": "Number of players (1-4):",
         "tolerance_label": "Tolerance (type diff):",
+        "tolerance_mark": "ⓘ",
+        "tolerance_explain_title": "What is tolerance?",
+        "tolerance_explain_body": "Tolerance sets the maximum allowed difference between the number of tile TYPES that require Coral and the number of TYPES that require Fish. The selector retries until |Coral−Fish| ≤ tolerance for TYPES. Piece distribution (total tiles) is not directly constrained, though it usually ends up fairly even.",
         "submit_button": "Generate selection",
         "regenerate_button": "Regenerate",
         "reset_button": "Reset",
@@ -87,6 +96,9 @@ LANGUAGES = {
         "expansion_label": "'Nesting Season' 확장 사용",
         "players_prompt": "플레이어 수 (1-4):",
         "tolerance_label": "허용 편차(유형 차이):",
+        "tolerance_mark": "ⓘ",
+        "tolerance_explain_title": "허용 편차란?",
+        "tolerance_explain_body": "허용 편차는 산호가 필요한 타일 유형 수와 물고기가 필요한 타일 유형 수의 차이에 대한 최대 허용치를 의미합니다. 선택기는 |산호−물고기| ≤ 허용 편차(유형 기준)가 될 때까지 다시 시도합니다. 총 타일 수(피스) 분포는 직접적으로 제한하지 않지만 보통 비슷하게 맞춰집니다.",
         "submit_button": "선택 생성",
         "regenerate_button": "다시 생성",
         "reset_button": "초기화",
@@ -156,33 +168,31 @@ def select_10_tile_types(tile_groups, rnd):
     - A,B,D: up to 2 each
     - C,E: up to 3 each
     - F: exactly 1
-    Then downsample to 10 keeping the F tile.
+    Then ensure exactly 10 keeping the F tile.
     """
     picks = []
-    # Choose exactly 1 from F
+    # Exactly 1 from F
     f_pick = rnd.choice(tile_groups['F'])
     # Up-to quotas for others
-    picks += rnd.sample(tile_groups['A'], min(2, len(tile_groups['A'])))
-    picks += rnd.sample(tile_groups['B'], min(2, len(tile_groups['B'])))
-    picks += rnd.sample(tile_groups['C'], min(3, len(tile_groups['C'])))
-    picks += rnd.sample(tile_groups['D'], min(2, len(tile_groups['D'])))
-    picks += rnd.sample(tile_groups['E'], min(3, len(tile_groups['E'])))
-    # Add F
+    for g, cap in [('A',2),('B',2),('C',3),('D',2),('E',3)]:
+        pool = tile_groups[g]
+        take = min(cap, len(pool))
+        picks += rnd.sample(pool, take)
     picks.append(f_pick)
     # Downsample to 10 preserving the F tile
     while len(picks) > 10:
-        # remove from non-F pool
         non_f = [t for t in picks if not t.startswith('F')]
         t = rnd.choice(non_f)
         picks.remove(t)
-    # Safety (shouldn't happen): if <10, top-up from largest groups
+    # Safety top-up if <10 (should be rare)
     while len(picks) < 10:
         for g, cap in [('C',3),('E',3),('A',2),('B',2),('D',2)]:
             avail = [t for t in tile_groups[g] if t not in picks]
             if avail:
                 picks.append(rnd.choice(avail))
                 break
-        if len(picks) >= 10: break
+        if len(picks) >= 10:
+            break
     return sorted(picks)
 
 def build_tile_list(types, copies, rnd):
@@ -290,7 +300,7 @@ TEMPLATE = '''
   <form method="post">
     <label><input type="checkbox" name="expansion" {% if expansion_checked %}checked{% endif %}> {{ tr['expansion_label'] }}</label><br><br>
     <label>{{ tr['players_prompt'] }} <input type="number" name="players" min="1" max="4" value="{{ players }}" required></label><br><br>
-    <label>{{ tr['tolerance_label'] }} <input type="number" name="tolerance" min="0" max="5" value="{{ tolerance }}" required></label>
+    <label>{{ tr['tolerance_label'] }} <sup title="{{ tr['tolerance_explain_title'] }}">{{ tr['tolerance_mark'] }}</sup> <input type="number" name="tolerance" min="0" max="5" value="{{ tolerance }}" required></label>
     <input type="hidden" name="seed" value="{{ seed or '' }}">
     <div style="margin-top:12px; display:flex; gap:.5rem; flex-wrap:wrap;">
       <button type="submit" name="action" value="generate">{{ tr['submit_button'] }}</button>
@@ -322,19 +332,20 @@ TEMPLATE = '''
   </div>
   <p style="margin-top:.5rem; opacity:.9;">Seed: <code>{{ seed }}</code> · <a href="#" onclick="copyShare('{{ share_url }}'); return false;">Copy share link</a></p>
   <p><em>{{ tr['type_diff'] }}:</em> {{ type_diff }} · <em>{{ tr['piece_diff'] }}:</em> {{ piece_diff }}</p>
+  <div id="tolerance-info" style="margin-top:0.75rem;opacity:.95;background:rgba(255,255,255,.08);padding:.75rem 1rem;border-radius:8px;">
+    <strong>{{ tr['tolerance_explain_title'] }}</strong><br>
+    <span>{{ tr['tolerance_explain_body'] }}</span>
+  </div>
   {% endif %}
 
   <details class="changelog">
     <summary>🛈 {{ tr['changelog'] }}</summary>
     <div class="panel">
       <ul>
-        <li><strong>2025-08-14</strong>
+        <li><strong>2025-10-02</strong>
           <ul>
-            <li>Added KO language.</li>
-            <li>Expansion toggle via checkbox; shared in URL.</li>
-            <li>Seed & tolerance in share URL; copy link.</li>
-            <li>Regenerate button shown after first result.</li>
-            <li>Balanced selection with type diff feedback.</li>
+            <li>Fixed version date; tolerance help; expansion + seed + tolerance in share URL.</li>
+            <li>Languages: CAT/ES/EN/KO. BGG title link. Balanced selection with type diff.</li>
           </ul>
         </li>
       </ul>
